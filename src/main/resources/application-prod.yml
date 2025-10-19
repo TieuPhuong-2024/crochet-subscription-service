@@ -1,6 +1,4 @@
 quarkus:
-  http:
-    port: 8082
   rest-client:
     paypal:
       url: ${paypal.base-url}
