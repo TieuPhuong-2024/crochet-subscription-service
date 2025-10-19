@@ -1,40 +1,5 @@
-paypal:
-  base-url: https://api.sandbox.paypal.com   # Prod: https://api-m.paypal.com
-  client-id: ${PAYPAL_CLIENT_ID}
-  client-secret: ${PAYPAL_CLIENT_SECRET}
-
 quarkus:
-  rest-client:
-    paypal:
-      url: ${paypal.base-url}
-      verify-host: true
-    user:
-      url: http://localhost:8082
-
-  datasource:
-    db-kind: postgresql
-    username: postgres
-    password: postgres
-    jdbc:
-      url: jdbc:postgresql://localhost:5432/subscription_db
-      max-size: 16
-
-  flyway:
-    migrate-at-start: true
-    baseline-on-migrate: true
-    locations: classpath:db/migration
-
-  hibernate-orm:
-    database:
-      default-catalog: update
-    log:
-      sql: true
-      format-sql: true
-
-  log:
-    level: INFO
-    console:
-      format: "%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{3.}] (%t) %s%e%n"
-
-jwt:
-  key: ${CROCHET_TOKEN_KEY}
+  config:
+    locations: application-${PROFILE:local}.yml
+  http:
+    port: 8082

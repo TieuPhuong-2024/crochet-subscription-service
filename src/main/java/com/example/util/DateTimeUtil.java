@@ -9,11 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public final class DateTimeUtils {
+public final class DateTimeUtil {
 
     private static final Pattern TIMEZONE_OFFSET_PATTERN = Pattern.compile(".*[+\\-]\\d{2}:?\\d{2}$");
 
-    private DateTimeUtils() {
+    private DateTimeUtil() {
         throw new UnsupportedOperationException("Utility class");
     }
 
@@ -44,7 +44,7 @@ public final class DateTimeUtils {
      * 
      * @param dateTimeStr Datetime string to parse
      * @return Parsed LocalDateTime or null if input is null/empty
-     * @throws IllegalArgumentException if format cannot be parsed
+     * @throws IllegalArgumentException if a format cannot be parsed
      */
     public static LocalDateTime parseFlexibleDateTime(String dateTimeStr) {
         if (dateTimeStr == null || dateTimeStr.trim().isEmpty()) {
@@ -65,7 +65,7 @@ public final class DateTimeUtils {
             try {
                 return LocalDateTime.parse(dateTimeStr, formatter);
             } catch (DateTimeParseException e) {
-                // Try next formatter
+                // Try the next formatter
             }
         }
 

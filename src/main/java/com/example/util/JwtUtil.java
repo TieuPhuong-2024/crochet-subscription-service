@@ -13,7 +13,7 @@ import java.security.Key;
 import java.util.Date;
 
 @ApplicationScoped
-public class JwtUtils {
+public class JwtUtil {
 
     @Inject
     JwtConfig jwtCfg;

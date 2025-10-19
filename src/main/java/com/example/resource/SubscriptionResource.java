@@ -12,6 +12,7 @@ import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.MediaType;
 
 @Path("/api/v1/subscriptions")
 public class SubscriptionResource {
@@ -20,8 +21,8 @@ public class SubscriptionResource {
     SubscriptionService subscriptionService;
 
     @POST
-    @Produces("application/json")
-    @Consumes("application/json")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<CreatePayPalSubscriptionResponse> create(@HeaderParam("X-Crochet-Access-Token") String authHeader,
                                                                  CreateSubscriptionRequest request) {
         CreatePayPalSubscriptionResponse response = subscriptionService.create(authHeader, request);

@@ -11,7 +11,7 @@ import com.example.mapping.SubscriptionMapper;
 import com.example.repository.SubscriptionRepository;
 import com.example.service.client.PayPalAuthClientService;
 import com.example.service.client.UserClientService;
-import com.example.util.JwtUtils;
+import com.example.util.JwtUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -54,19 +54,19 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     ObjectMapper om;
 
     @Inject
-    JwtUtils jwtUtils;
+    JwtUtil jwtUtil;
 
     @Transactional
     @Override
     public CreatePayPalSubscriptionResponse create(String authHeader, CreateSubscriptionRequest request) {
         log.info("Create subscription with token: {}", authHeader);
 
-        var crochetJwtToken = jwtUtils.subString(authHeader);
-        if (jwtUtils.isExpired(crochetJwtToken)) {
+        var crochetJwtToken = jwtUtil.subString(authHeader);
+        if (jwtUtil.isExpired(crochetJwtToken)) {
             throw new ValidationException("Authentication token has expired");
         }
 
-        String userId = jwtUtils.extractSubject(crochetJwtToken);
+        String userId = jwtUtil.extractSubject(crochetJwtToken);
         if (userId == null) {
             throw new ValidationException("Invalid or missing authentication token");
         }

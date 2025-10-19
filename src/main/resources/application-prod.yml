@@ -1,0 +1,38 @@
+quarkus:
+  rest-client:
+    paypal:
+      url: ${paypal.base-url}
+      verify-host: true
+    user:
+      url: ${BASE_SERVICE_URL}
+
+  datasource:
+    db-kind: postgresql
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    jdbc:
+      url: ${DATABASE_URL}
+      max-size: 16
+
+  hibernate-orm:
+    database:
+      default-catalog: update
+    log:
+      sql: true
+      format-sql: true
+
+  log:
+    level: INFO
+    console:
+      format: "%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{3.}] (%t) %s%e%n"
+
+  http:
+    port: 8082
+
+jwt:
+  key: ${CROCHET_TOKEN_KEY}
+
+paypal:
+  base-url: https://api-m.paypal.com   # Prod: https://api-m.paypal.com
+  client-id: ${PAYPAL_CLIENT_ID}
+  client-secret: ${PAYPAL_CLIENT_SECRET}

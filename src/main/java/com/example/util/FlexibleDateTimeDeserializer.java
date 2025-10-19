@@ -16,6 +16,6 @@ public class FlexibleDateTimeDeserializer extends JsonDeserializer<LocalDateTime
         if (value == null || value.trim().isEmpty()) {
             return null;
         }
-        return DateTimeUtils.parseFlexibleDateTime(value);
+        return DateTimeUtil.parseFlexibleDateTime(value);
     }
 }
