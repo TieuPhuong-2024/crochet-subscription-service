@@ -1,5 +1,4 @@
 quarkus:
-  config:
-    locations: application-${PROFILE:local}.yml
   http:
     port: 8082
+  profile: local

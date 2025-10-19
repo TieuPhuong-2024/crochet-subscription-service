@@ -1,11 +1,12 @@
 quarkus:
+  http:
+    port: 8082
   rest-client:
     paypal:
       url: ${paypal.base-url}
       verify-host: true
     user:
       url: ${BASE_SERVICE_URL}
-
   datasource:
     db-kind: postgresql
     username: ${DB_USERNAME}
@@ -13,21 +14,17 @@ quarkus:
     jdbc:
       url: ${DATABASE_URL}
       max-size: 16
-
   hibernate-orm:
     database:
       default-catalog: update
     log:
       sql: true
       format-sql: true
-
   log:
     level: INFO
     console:
       format: "%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{3.}] (%t) %s%e%n"
-
-  http:
-    port: 8082
+      color: false
 
 jwt:
   key: ${CROCHET_TOKEN_KEY}
