@@ -14,11 +14,13 @@ import com.example.service.client.UserClientService;
 import com.example.util.JwtUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.enterprise.concurrent.Asynchronous;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
 import java.util.Map;
@@ -28,11 +30,11 @@ import java.util.Map;
 public class SubscriptionServiceImpl implements SubscriptionService {
 
     private static final Map<String, SubscriptionStatus> EVENT_TO_STATUS = Map.of(
+            "BILLING.SUBSCRIPTION.ACTIVATED", SubscriptionStatus.ACTIVE,
             "BILLING.SUBSCRIPTION.RE-ACTIVATED", SubscriptionStatus.ACTIVE,
             "BILLING.SUBSCRIPTION.SUSPENDED", SubscriptionStatus.SUSPENDED,
             "BILLING.SUBSCRIPTION.CANCELLED", SubscriptionStatus.CANCELLED,
-            "BILLING.SUBSCRIPTION.EXPIRED", SubscriptionStatus.EXPIRED
-    );
+            "BILLING.SUBSCRIPTION.EXPIRED", SubscriptionStatus.EXPIRED);
 
     @Inject
     PayPalAuthClientService authClientService;
@@ -56,6 +58,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Inject
     JwtUtil jwtUtil;
 
+    @ConfigProperty(name = "quarkus.profile")
+    String profile;
+
+    @Asynchronous
+    private void updateUserRole(String userId, String jwt, UpdateUserRequest.RoleType role) {
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setId(userId);
+        request.setRole(role);
+        userClientService.update("Bearer " + jwt, request);
+        log.info("User role updated to {}: {}", role, userId);
+    }
+
     @Transactional
     @Override
     public CreatePayPalSubscriptionResponse create(String authHeader, CreateSubscriptionRequest request) {
@@ -72,7 +86,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         subRepo.findByUserId(userId)
-                .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE || sub.getStatus() == SubscriptionStatus.APPROVAL_PENDING)
+                .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE
+                        || sub.getStatus() == SubscriptionStatus.APPROVAL_PENDING)
                 .ifPresent(sub -> {
                     String message = sub.getStatus() == SubscriptionStatus.ACTIVE
                             ? "User already has an active subscription"
@@ -80,7 +95,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     throw new ValidationException(message);
                 });
 
-        CreatePayPalSubscriptionResponse createSubRes = paypalSubClient.create(authClientService.getAccessToken(), request);
+        CreatePayPalSubscriptionResponse createSubRes = paypalSubClient.create(authClientService.getAccessToken(),
+                request);
         if (createSubRes == null) {
             throw new ValidationException("Failed to create subscription with PayPal");
         }
@@ -104,12 +120,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         sub.setStatus(SubscriptionStatus.ACTIVE);
         subRepo.persist(sub);
 
-        UpdateUserRequest request = new UpdateUserRequest();
-        request.setId(sub.getUserId());
-        request.setRole(UpdateUserRequest.RoleType.VIP_USER);
-        userClientService.update("Bearer " + sub.getCrochetJwtToken(), request);
-
-        log.info("User role updated: {}", sub.getUserId());
+        // Update role only in non-prod environments for local testing; prod relies on
+        // webhooks
+        if (!"prod".equals(profile)) {
+            updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.VIP_USER);
+        }
 
         subRepo.flush();
     }
@@ -139,6 +154,13 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             subRepo.flush();
             String action = eventType.substring(eventType.lastIndexOf('.') + 1).toLowerCase().replace("-", "");
             log.info("Subscription {}: {}", action, subscriptionId);
+
+            // Update user role based on status change
+            if (newStatus == SubscriptionStatus.ACTIVE) {
+                updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.VIP_USER);
+            } else if (newStatus == SubscriptionStatus.EXPIRED) {
+                updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.USER);
+            }
         } else {
             log.info("Unhandled webhook event type: {}", eventType);
         }
