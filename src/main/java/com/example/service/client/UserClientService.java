@@ -1,7 +1,7 @@
 package com.example.service.client;
 
-import com.example.dto.UpdateUserRequest;
+import com.example.dto.UserUpdateRequest;
 
 public interface UserClientService {
-    void update(String bearerToken, UpdateUserRequest request);
+    void update(String apiKey, UserUpdateRequest request);
 }

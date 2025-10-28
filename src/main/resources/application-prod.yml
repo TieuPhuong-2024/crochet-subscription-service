@@ -1,7 +1,7 @@
 quarkus:
   rest-client:
     paypal:
-      url: ${paypal.base-url}
+      url: ${PAYPAL_URL}
       verify-host: true
     user:
       url: ${BASE_SERVICE_URL}
@@ -23,11 +23,3 @@ quarkus:
     console:
       format: "%d{yyyy-MM-dd HH:mm:ss} %-5p [%c{3.}] (%t) %s%e%n"
       color: false
-
-jwt:
-  key: ${CROCHET_TOKEN_KEY}
-
-paypal:
-  base-url: https://api-m.paypal.com   # Prod: https://api-m.paypal.com
-  client-id: ${PAYPAL_CLIENT_ID}
-  client-secret: ${PAYPAL_CLIENT_SECRET}

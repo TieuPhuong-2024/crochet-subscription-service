@@ -1,6 +1,6 @@
 package com.example.util;
 
-import com.example.config.JwtConfig;
+import com.example.config.AppConfig;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -16,10 +16,10 @@ import java.util.Date;
 public class JwtUtil {
 
     @Inject
-    JwtConfig jwtCfg;
+    AppConfig appConfig;
 
     private Key getKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtCfg.key());
+        byte[] keyBytes = Decoders.BASE64.decode(appConfig.jwt().jwtKey());
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

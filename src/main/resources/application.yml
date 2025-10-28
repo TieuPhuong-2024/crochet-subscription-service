@@ -2,3 +2,11 @@ quarkus:
   http:
     port: 8082
   profile: local
+app:
+  api-key: ${API_KEY}
+  jwt:
+    jwt-key: ${JWT_KEY}
+  paypal:
+    base-url: ${PAYPAL_URL}
+    client-id: ${PAYPAL_CLIENT_ID}
+    client-secret: ${PAYPAL_CLIENT_SECRET}

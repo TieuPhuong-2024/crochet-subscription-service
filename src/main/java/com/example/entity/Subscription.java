@@ -8,14 +8,16 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.time.Instant;
 
 @Entity
 @Table(name = "subscriptions")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -23,6 +25,9 @@ public class Subscription {
 
     @Id
     private String id;
+
+    @Column(name = "plan_id")
+    private String planId;
 
     @Column(name = "user_id", nullable = false)
     private String userId;
@@ -36,7 +41,4 @@ public class Subscription {
 
     @Column(name = "approve_link")
     private String approveLink;
-
-    @Column(name = "crochet_jwt_token")
-    private String crochetJwtToken;
 }

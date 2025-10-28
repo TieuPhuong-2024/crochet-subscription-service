@@ -1,7 +1,7 @@
 package com.example.service.client;
 
 import com.example.client.PayPalAuthClient;
-import com.example.config.PayPalConfig;
+import com.example.config.AppConfig;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import jakarta.annotation.PostConstruct;
@@ -19,7 +19,7 @@ import java.util.Map;
 @ApplicationScoped
 public class PayPalAuthClientServiceImpl implements PayPalAuthClientService {
     @Inject
-    PayPalConfig cfg;
+    AppConfig cfg;
 
     @Inject
     @RestClient
@@ -29,7 +29,8 @@ public class PayPalAuthClientServiceImpl implements PayPalAuthClientService {
 
     private static final String CACHE_KEY = "paypal_token";
 
-    record CachedToken(String token, long expiryTime) {}
+    record CachedToken(String token, long expiryTime) {
+    }
 
     @PostConstruct
     void initCache() {
@@ -50,7 +51,7 @@ public class PayPalAuthClientServiceImpl implements PayPalAuthClientService {
 
         log.info("Fetching new PayPal access token");
         String basic = Base64.getEncoder().encodeToString(
-                (cfg.clientId() + ":" + cfg.clientSecret()).getBytes(StandardCharsets.UTF_8));
+                (cfg.paypal().clientId() + ":" + cfg.paypal().clientSecret()).getBytes(StandardCharsets.UTF_8));
         Map<String, Object> resp = authClient.token("Basic " + basic, "client_credentials");
         String accessToken = (String) resp.get("access_token");
         Integer expiresIn = (Integer) resp.get("expires_in");

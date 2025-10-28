@@ -1,7 +1,8 @@
 package com.example.service;
 
 import com.example.client.PayPalSubscriptionsClient;
-import com.example.dto.UpdateUserRequest;
+import com.example.config.AppConfig;
+import com.example.dto.UserUpdateRequest;
 import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
 import com.example.dto.subscription.CreateSubscriptionRequest;
 import com.example.entity.SubscriptionStatus;
@@ -61,12 +62,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @ConfigProperty(name = "quarkus.profile")
     String profile;
 
+    @Inject
+    AppConfig cfg;
+
     @Asynchronous
-    private void updateUserRole(String userId, String jwt, UpdateUserRequest.RoleType role) {
-        UpdateUserRequest request = new UpdateUserRequest();
+    private void updateUserRole(String userId, String role) {
+        UserUpdateRequest request = new UserUpdateRequest();
         request.setId(userId);
         request.setRole(role);
-        userClientService.update("Bearer " + jwt, request);
+        userClientService.update(cfg.apiKey(), request);
         log.info("User role updated to {}: {}", role, userId);
     }
 
@@ -102,8 +106,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
 
         var sub = subMapper.toEntity(createSubRes);
+        sub.setPlanId(request.getPlanId());
         sub.setUserId(userId);
-        sub.setCrochetJwtToken(crochetJwtToken);
         subRepo.persist(sub);
 
         log.info("Subscription created successfully for user: {}", userId);
@@ -123,7 +127,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         // Update role only in non-prod environments for local testing; prod relies on
         // webhooks
         if (!"prod".equals(profile)) {
-            updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.VIP_USER);
+            updateUserRole(sub.getUserId(), "VIP_USER");
         }
 
         subRepo.flush();
@@ -157,9 +161,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             // Update user role based on status change
             if (newStatus == SubscriptionStatus.ACTIVE) {
-                updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.VIP_USER);
+                updateUserRole(sub.getUserId(), "VIP_USER");
             } else if (newStatus == SubscriptionStatus.EXPIRED) {
-                updateUserRole(sub.getUserId(), sub.getCrochetJwtToken(), UpdateUserRequest.RoleType.USER);
+                updateUserRole(sub.getUserId(), "USER");
             }
         } else {
             log.info("Unhandled webhook event type: {}", eventType);

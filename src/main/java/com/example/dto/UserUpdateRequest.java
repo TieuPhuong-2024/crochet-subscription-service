@@ -5,12 +5,8 @@ import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
-public class UpdateUserRequest {
+public class UserUpdateRequest {
     private String id;
     private String name;
-    private RoleType role;
-
-    public enum RoleType {
-        ADMIN, USER, VIP_USER
-    }
+    private String role;
 }
