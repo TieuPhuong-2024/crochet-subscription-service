@@ -5,6 +5,8 @@ import com.example.config.AppConfig;
 import com.example.dto.UserUpdateRequest;
 import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
 import com.example.dto.subscription.CreateSubscriptionRequest;
+import com.example.dto.subscription.PayPalSubscriptionDetails;
+import com.example.dto.subscription.UserSubscription;
 import com.example.entity.SubscriptionStatus;
 import com.example.exception.ResourceNotFoundException;
 import com.example.exception.ValidationException;
@@ -24,6 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Map;
 
 @Slf4j
@@ -168,5 +173,60 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         } else {
             log.info("Unhandled webhook event type: {}", eventType);
         }
+    }
+
+    @Override
+    public UserSubscription getUserSubscription(String userId) {
+        if (userId == null) {
+            throw new ValidationException("User id cannot blank");
+        }
+
+        var subscription = subRepo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found for user", userId));
+
+        // Get PayPal subscription details to get additional information
+        PayPalSubscriptionDetails payPalDetails = paypalSubClient.getSubscription(
+                authClientService.getAccessToken(),
+                subscription.getId()
+        );
+
+        if (payPalDetails == null) {
+            throw new ValidationException("Failed to fetch subscription details from PayPal");
+        }
+
+        return mapToUserSubscription(subscription, payPalDetails);
+    }
+
+    private UserSubscription mapToUserSubscription(com.example.entity.Subscription subscription,
+                                                     PayPalSubscriptionDetails payPalDetails) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
+                .withZone(ZoneOffset.UTC);
+
+        return UserSubscription.builder()
+                .id(subscription.getId())
+                .userId(subscription.getUserId())
+                .planId(subscription.getPlanId())
+                .paypalSubscriptionId(subscription.getId())
+                .status(mapStatusToFrontend(subscription.getStatus()))
+                .startDate(payPalDetails.getStartTime() != null ?
+                        formatter.format(payPalDetails.getStartTime()) : null)
+                .endDate(null) // PayPal doesn't always provide end date; can be calculated based on billing cycles if needed
+                .createdAt(payPalDetails.getCreateTime() != null ?
+                        formatter.format(payPalDetails.getCreateTime()) : null)
+                .updatedAt(payPalDetails.getUpdateTime() != null ?
+                        formatter.format(payPalDetails.getUpdateTime()) : null)
+                .build();
+    }
+
+    private String mapStatusToFrontend(SubscriptionStatus status) {
+        if (status == null) {
+            return null;
+        }
+        return switch (status) {
+            case CREATED, APPROVAL_PENDING, SUSPENDED -> "pending";
+            case ACTIVE -> "active";
+            case CANCELLED -> "cancelled";
+            case EXPIRED -> "expired";
+        };
     }
 }

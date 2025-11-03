@@ -3,6 +3,7 @@ package com.example.resource;
 import com.example.dto.ApiResponse;
 import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
 import com.example.dto.subscription.CreateSubscriptionRequest;
+import com.example.dto.subscription.UserSubscription;
 import com.example.service.SubscriptionService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -27,6 +28,13 @@ public class SubscriptionResource {
                                                                  CreateSubscriptionRequest request) {
         CreatePayPalSubscriptionResponse response = subscriptionService.create(authHeader, request);
         return ApiResponse.success("Subscription created successfully", response);
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    public ApiResponse<UserSubscription> getUserSubscription(@QueryParam("user_id") String userId) {
+        UserSubscription userSubscription = subscriptionService.getUserSubscription(userId);
+        return ApiResponse.success("User subscription retrieved successfully", userSubscription);
     }
 
     @GET
