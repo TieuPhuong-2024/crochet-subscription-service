@@ -21,9 +21,8 @@ dependencies {
     implementation 'io.quarkus:quarkus-flyway'
     implementation "io.quarkus:quarkus-config-yaml"
     implementation 'io.quarkus:quarkus-arc'
-
-    implementation 'jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api:3.1.1'
-
+    implementation "io.quarkus:quarkus-hibernate-validator"
+    implementation 'io.quarkus:quarkus-mutiny'
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'

@@ -1,5 +1,6 @@
-package com.example.dto.subscription;
+package com.example.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -11,20 +12,27 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PayPalSubscriptionDetails {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class PayPalResponse {
 
     private String id;
     private String status;
+
     @JsonProperty("status_change_note")
     private String statusChangeNote;
+
     @JsonProperty("status_change_time")
     private Instant statusChangeTime;
+
     @JsonProperty("plan_id")
     private String planId;
+
     @JsonProperty("start_time")
     private Instant startTime;
+
     @JsonProperty("create_time")
     private Instant createTime;
+
     @JsonProperty("update_time")
     private Instant updateTime;
 
@@ -34,14 +42,19 @@ public class PayPalSubscriptionDetails {
     @JsonProperty("billing_info")
     private BillingInfo billingInfo;
 
+    @JsonProperty("links")
+    private List<Link> links;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class Subscriber {
         @JsonProperty("email_address")
         private String emailAddress;
+
         @JsonProperty("payer_id")
         private String payerId;
+
         @JsonProperty("payer_name")
         private PayerName payerName;
     }
@@ -52,6 +65,7 @@ public class PayPalSubscriptionDetails {
     public static class PayerName {
         @JsonProperty("given_name")
         private String givenName;
+
         @JsonProperty("surname")
         private String surname;
     }
@@ -70,13 +84,26 @@ public class PayPalSubscriptionDetails {
     public static class CycleExecution {
         @JsonProperty("tenure_type")
         private String tenureType;
+
         @JsonProperty("sequence")
         private Integer sequence;
+
         @JsonProperty("cycles_completed")
         private Integer cyclesCompleted;
+
         @JsonProperty("cycles_remaining")
         private Integer cyclesRemaining;
+
         @JsonProperty("total_cycles")
         private Integer totalCycles;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Link {
+        private String href;
+        private String rel;
+        private String method;
     }
 }

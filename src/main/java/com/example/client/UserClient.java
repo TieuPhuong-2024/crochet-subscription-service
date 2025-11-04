@@ -1,6 +1,7 @@
 package com.example.client;
 
 import com.example.dto.UserUpdateRequest;
+import io.smallrye.mutiny.Uni;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.HeaderParam;
 import jakarta.ws.rs.PUT;
@@ -16,6 +17,6 @@ public interface UserClient {
     @PUT
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    void update(@HeaderParam("X-Internal-Api-Key") String apiKey,
+    Uni<Void> update(@HeaderParam("X-Internal-Api-Key") String apiKey,
                 UserUpdateRequest request);
 }

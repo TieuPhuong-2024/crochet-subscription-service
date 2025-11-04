@@ -1,9 +1,9 @@
 package com.example.resource;
 
 import com.example.dto.ApiResponse;
-import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
-import com.example.dto.subscription.CreateSubscriptionRequest;
-import com.example.dto.subscription.UserSubscription;
+import com.example.dto.CreateSubscriptionRequest;
+import com.example.dto.PayPalResponse;
+import com.example.dto.UserSubscription;
 import com.example.service.SubscriptionService;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
@@ -24,9 +24,9 @@ public class SubscriptionResource {
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public ApiResponse<CreatePayPalSubscriptionResponse> create(@HeaderParam("X-Crochet-Access-Token") String authHeader,
-                                                                 CreateSubscriptionRequest request) {
-        CreatePayPalSubscriptionResponse response = subscriptionService.create(authHeader, request);
+    public ApiResponse<PayPalResponse> create(@HeaderParam("X-Crochet-Access-Token") String authHeader,
+                                              CreateSubscriptionRequest request) {
+        PayPalResponse response = subscriptionService.create(authHeader, request);
         return ApiResponse.success("Subscription created successfully", response);
     }
 

@@ -2,11 +2,10 @@ package com.example.service;
 
 import com.example.client.PayPalSubscriptionsClient;
 import com.example.config.AppConfig;
+import com.example.dto.CreateSubscriptionRequest;
+import com.example.dto.PayPalResponse;
 import com.example.dto.UserUpdateRequest;
-import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
-import com.example.dto.subscription.CreateSubscriptionRequest;
-import com.example.dto.subscription.PayPalSubscriptionDetails;
-import com.example.dto.subscription.UserSubscription;
+import com.example.dto.UserSubscription;
 import com.example.entity.SubscriptionStatus;
 import com.example.exception.ResourceNotFoundException;
 import com.example.exception.ValidationException;
@@ -17,7 +16,7 @@ import com.example.service.client.UserClientService;
 import com.example.util.JwtUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.enterprise.concurrent.Asynchronous;
+import io.smallrye.mutiny.Uni;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -26,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
-import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
@@ -70,18 +68,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Inject
     AppConfig cfg;
 
-    @Asynchronous
-    private void updateUserRole(String userId, String role) {
-        UserUpdateRequest request = new UserUpdateRequest();
-        request.setId(userId);
-        request.setRole(role);
-        userClientService.update(cfg.apiKey(), request);
-        log.info("User role updated to {}: {}", role, userId);
+    private Uni<Void> updateUserRole(String userId, String role) {
+        UserUpdateRequest request = UserUpdateRequest.builder()
+                .id(userId)
+                .role(role)
+                .build();
+        return userClientService.update(cfg.apiKey(), request)
+                .onItem().invoke(() -> log.info("User role updated to {}: {}", role, userId));
     }
 
     @Transactional
     @Override
-    public CreatePayPalSubscriptionResponse create(String authHeader, CreateSubscriptionRequest request) {
+    public PayPalResponse create(String authHeader, CreateSubscriptionRequest request) {
         log.info("Create subscription with token: {}", authHeader);
 
         var crochetJwtToken = jwtUtil.subString(authHeader);
@@ -104,7 +102,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                     throw new ValidationException(message);
                 });
 
-        CreatePayPalSubscriptionResponse createSubRes = paypalSubClient.create(authClientService.getAccessToken(),
+        PayPalResponse createSubRes = paypalSubClient.create(authClientService.getAccessToken(),
                 request);
         if (createSubRes == null) {
             throw new ValidationException("Failed to create subscription with PayPal");
@@ -132,7 +130,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         // Update role only in non-prod environments for local testing; prod relies on
         // webhooks
         if (!"prod".equals(profile)) {
-            updateUserRole(sub.getUserId(), "VIP_USER");
+            updateUserRole(sub.getUserId(), "VIP_USER").subscribe().with(
+                    success -> {},
+                    failure -> log.error("Failed to update user role", failure)
+            );
         }
 
         subRepo.flush();
@@ -166,9 +167,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
             // Update user role based on status change
             if (newStatus == SubscriptionStatus.ACTIVE) {
-                updateUserRole(sub.getUserId(), "VIP_USER");
+                updateUserRole(sub.getUserId(), "VIP_USER").subscribe().with(
+                        success -> {},
+                        failure -> log.error("Failed to update user role", failure)
+                );
             } else if (newStatus == SubscriptionStatus.EXPIRED) {
-                updateUserRole(sub.getUserId(), "USER");
+                updateUserRole(sub.getUserId(), "USER").subscribe().with(
+                        success -> {},
+                        failure -> log.error("Failed to update user role", failure)
+                );
             }
         } else {
             log.info("Unhandled webhook event type: {}", eventType);
@@ -185,7 +192,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Subscription not found for user", userId));
 
         // Get PayPal subscription details to get additional information
-        PayPalSubscriptionDetails payPalDetails = paypalSubClient.getSubscription(
+        PayPalResponse payPalDetails = paypalSubClient.getSubscription(
                 authClientService.getAccessToken(),
                 subscription.getId()
         );
@@ -198,7 +205,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     private UserSubscription mapToUserSubscription(com.example.entity.Subscription subscription,
-                                                     PayPalSubscriptionDetails payPalDetails) {
+                                                   PayPalResponse payPalDetails) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
                 .withZone(ZoneOffset.UTC);
 

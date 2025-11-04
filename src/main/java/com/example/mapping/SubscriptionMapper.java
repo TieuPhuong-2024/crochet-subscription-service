@@ -1,6 +1,6 @@
 package com.example.mapping;
 
-import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
+import com.example.dto.PayPalResponse;
 import com.example.entity.Subscription;
 import com.example.entity.SubscriptionStatus;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -11,7 +11,7 @@ import java.util.Optional;
 public class SubscriptionMapper {
 
     public Subscription toEntity(
-            CreatePayPalSubscriptionResponse response) {
+            PayPalResponse response) {
         if (response == null) {
             return null;
         }
@@ -21,7 +21,7 @@ public class SubscriptionMapper {
                 .flatMap(links -> links.stream()
                         .filter(link -> "approve".equals(link.getRel()))
                         .findFirst()
-                        .map(CreatePayPalSubscriptionResponse.Link::getHref))
+                        .map(PayPalResponse.Link::getHref))
                 .orElse("");
 
         builder

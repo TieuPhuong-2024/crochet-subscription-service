@@ -1,8 +1,7 @@
 package com.example.client;
 
-import com.example.dto.subscription.CreatePayPalSubscriptionResponse;
-import com.example.dto.subscription.CreateSubscriptionRequest;
-import com.example.dto.subscription.PayPalSubscriptionDetails;
+import com.example.dto.CreateSubscriptionRequest;
+import com.example.dto.PayPalResponse;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.HeaderParam;
@@ -20,12 +19,12 @@ public interface PayPalSubscriptionsClient {
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    CreatePayPalSubscriptionResponse create(@HeaderParam("Authorization") String bearer,
-                                            CreateSubscriptionRequest request);
+    PayPalResponse create(@HeaderParam("Authorization") String bearer,
+                          CreateSubscriptionRequest request);
 
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
-    PayPalSubscriptionDetails getSubscription(@HeaderParam("Authorization") String bearer,
-                                              @PathParam("id") String id);
+    PayPalResponse getSubscription(@HeaderParam("Authorization") String bearer,
+                                   @PathParam("id") String id);
 }
