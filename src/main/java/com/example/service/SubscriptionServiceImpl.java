@@ -243,112 +243,113 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     // Plan operations
     @Override
-    public PlanResponse createPlan(String token, CreatePlanRequest request) {
+    public PlanResponse createPlan(CreatePlanRequest request) {
         log.info("Creating PayPal plan");
-        return paypalSubClient.createPlan(token, null, request);
+        return paypalSubClient.createPlan(authClientService.getAccessToken(), null, request);
     }
 
     @Override
-    public ListPlansResponse listPlans(String token, String productId, Integer pageSize, Integer page,
+    public ListPlansResponse listPlans(String productId, Integer pageSize, Integer page,
             Boolean totalRequired) {
         log.info("Listing PayPal plans");
-        return paypalSubClient.listPlans(token, productId, pageSize, page, totalRequired);
+        return paypalSubClient.listPlans(authClientService.getAccessToken(), productId, pageSize, page, totalRequired);
     }
 
     @Override
-    public PlanResponse getPlan(String token, String planId) {
+    public PlanResponse getPlan(String planId) {
         log.info("Getting PayPal plan: {}", planId);
-        return paypalSubClient.getPlan(token, planId);
+        return paypalSubClient.getPlan(authClientService.getAccessToken(), planId);
     }
 
     @Override
-    public PlanResponse updatePlan(String token, String planId, UpdateSubscriptionRequest request) {
+    public PlanResponse updatePlan(String planId, UpdateSubscriptionRequest request) {
         log.info("Updating PayPal plan: {}", planId);
-        return paypalSubClient.updatePlan(token, planId, request);
+        return paypalSubClient.updatePlan(authClientService.getAccessToken(), planId, request);
     }
 
     @Override
-    public void activatePlan(String token, String planId) {
+    public void activatePlan(String planId) {
         log.info("Activating PayPal plan: {}", planId);
-        paypalSubClient.activatePlan(token, planId);
+        paypalSubClient.activatePlan(authClientService.getAccessToken(), planId);
     }
 
     @Override
-    public void deactivatePlan(String token, String planId) {
+    public void deactivatePlan(String planId) {
         log.info("Deactivating PayPal plan: {}", planId);
-        paypalSubClient.deactivatePlan(token, planId);
+        paypalSubClient.deactivatePlan(authClientService.getAccessToken(), planId);
     }
 
     @Override
-    public void updatePricing(String token, String planId, UpdatePricingRequest request) {
+    public void updatePricing(String planId, UpdatePricingRequest request) {
         log.info("Updating pricing for PayPal plan: {}", planId);
-        paypalSubClient.updatePricing(token, planId, request);
+        paypalSubClient.updatePricing(authClientService.getAccessToken(), planId, request);
     }
 
     // Subscription operations
     @Override
     public PayPalResponse createSubscription(String token, CreateSubscriptionRequest request) {
         log.info("Creating PayPal subscription");
-        return paypalSubClient.createSubscription(token, null, null, request);
+        return paypalSubClient.createSubscription(authClientService.getAccessToken(), null, null, request);
     }
 
     @Override
-    public ListSubscriptionsResponse listSubscriptions(String token, String planIds, String statuses,
+    public ListSubscriptionsResponse listSubscriptions(String planIds, String statuses,
             String createdAfter,
             String createdBefore, String statusUpdatedBefore, String statusUpdatedAfter,
             String filter, Integer pageSize, Integer page, String customerIds) {
         log.info("Listing PayPal subscriptions");
-        return paypalSubClient.listSubscriptions(token, planIds, statuses, createdAfter, createdBefore,
+        return paypalSubClient.listSubscriptions(authClientService.getAccessToken(), planIds, statuses, createdAfter,
+                createdBefore,
                 statusUpdatedBefore, statusUpdatedAfter, filter, pageSize, page, customerIds);
     }
 
     @Override
-    public SubscriptionResponse getSubscription(String token, String subscriptionId, String fields) {
+    public SubscriptionResponse getSubscription(String subscriptionId, String fields) {
         log.info("Getting PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.getSubscription(token, subscriptionId, fields);
+        return paypalSubClient.getSubscription(authClientService.getAccessToken(), subscriptionId, fields);
     }
 
     @Override
-    public void updateSubscription(String token, String subscriptionId, UpdateSubscriptionRequest request) {
+    public void updateSubscription(String subscriptionId, UpdateSubscriptionRequest request) {
         log.info("Updating PayPal subscription: {}", subscriptionId);
-        paypalSubClient.updateSubscription(token, subscriptionId, request);
+        paypalSubClient.updateSubscription(authClientService.getAccessToken(), subscriptionId, request);
     }
 
     @Override
-    public PayPalResponse reviseSubscription(String token, String subscriptionId, ReviseSubscriptionRequest request) {
+    public PayPalResponse reviseSubscription(String subscriptionId, ReviseSubscriptionRequest request) {
         log.info("Revising PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.reviseSubscription(token, subscriptionId, request);
+        return paypalSubClient.reviseSubscription(authClientService.getAccessToken(), subscriptionId, request);
     }
 
     @Override
-    public void suspendSubscription(String token, String subscriptionId, SubscriptionActionRequest request) {
+    public void suspendSubscription(String subscriptionId, SubscriptionActionRequest request) {
         log.info("Suspending PayPal subscription: {}", subscriptionId);
-        paypalSubClient.suspendSubscription(token, subscriptionId, request);
+        paypalSubClient.suspendSubscription(authClientService.getAccessToken(), subscriptionId, request);
     }
 
     @Override
-    public void cancelSubscription(String token, String subscriptionId, SubscriptionActionRequest request) {
+    public void cancelSubscription(String subscriptionId, SubscriptionActionRequest request) {
         log.info("Cancelling PayPal subscription: {}", subscriptionId);
-        paypalSubClient.cancelSubscription(token, subscriptionId, request);
+        paypalSubClient.cancelSubscription(authClientService.getAccessToken(), subscriptionId, request);
     }
 
     @Override
-    public void activateSubscription(String token, String subscriptionId, SubscriptionActionRequest request) {
+    public void activateSubscription(String subscriptionId, SubscriptionActionRequest request) {
         log.info("Activating PayPal subscription: {}", subscriptionId);
-        paypalSubClient.activateSubscription(token, subscriptionId, request);
+        paypalSubClient.activateSubscription(authClientService.getAccessToken(), subscriptionId, request);
     }
 
     @Override
-    public PayPalResponse capturePayment(String token, String subscriptionId, CaptureSubscriptionRequest request) {
+    public PayPalResponse capturePayment(String subscriptionId, CaptureSubscriptionRequest request) {
         log.info("Capturing payment for PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.capturePayment(token, null, subscriptionId, request);
+        return paypalSubClient.capturePayment(authClientService.getAccessToken(), null, subscriptionId, request);
     }
 
     @Override
-    public SubscriptionTransactionsResponse getTransactions(String token, String subscriptionId, String startTime,
+    public SubscriptionTransactionsResponse getTransactions(String subscriptionId, String startTime,
             String endTime) {
         log.info("Getting transactions for PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.getTransactions(token, subscriptionId, startTime, endTime);
+        return paypalSubClient.getTransactions(authClientService.getAccessToken(), subscriptionId, startTime, endTime);
     }
 
 }

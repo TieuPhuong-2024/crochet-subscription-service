@@ -1,9 +1,32 @@
 package com.example.resource;
 
-import com.example.dto.*;
+import com.example.dto.ApiResponse;
+import com.example.dto.CaptureSubscriptionRequest;
+import com.example.dto.CreatePlanRequest;
+import com.example.dto.CreateSubscriptionRequest;
+import com.example.dto.ListPlansResponse;
+import com.example.dto.ListSubscriptionsResponse;
+import com.example.dto.PayPalResponse;
+import com.example.dto.PlanResponse;
+import com.example.dto.ReviseSubscriptionRequest;
+import com.example.dto.SubscriptionActionRequest;
+import com.example.dto.SubscriptionResponse;
+import com.example.dto.SubscriptionTransactionsResponse;
+import com.example.dto.UpdatePricingRequest;
+import com.example.dto.UpdateSubscriptionRequest;
+import com.example.dto.UserSubscription;
 import com.example.service.SubscriptionService;
+
 import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.HeaderParam;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 
 @Path("/api/v1/subscriptions")
@@ -16,7 +39,7 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<PayPalResponse> createSubscription(@HeaderParam("X-Crochet-Access-Token") String authHeader,
-                                                         CreateSubscriptionRequest request) {
+            CreateSubscriptionRequest request) {
         PayPalResponse response = subscriptionService.create(authHeader, request);
         return ApiResponse.success("Subscription created successfully", response);
     }
@@ -44,8 +67,8 @@ public class SubscriptionResource {
     @POST
     @Path("/webhook")
     public ApiResponse<Void> handleWebhook(String payload) {
-    subscriptionService.handleWebhookEvent(payload);
-    return ApiResponse.success("Webhook processed successfully");
+        subscriptionService.handleWebhookEvent(payload);
+        return ApiResponse.success("Webhook processed successfully");
     }
 
     // Plan endpoints
@@ -54,7 +77,7 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<PlanResponse> createPlan(CreatePlanRequest request) {
-        PlanResponse response = subscriptionService.createPlan(null, request); // TODO: Add auth
+        PlanResponse response = subscriptionService.createPlan(request);
         return ApiResponse.success("Plan created successfully", response);
     }
 
@@ -62,10 +85,10 @@ public class SubscriptionResource {
     @Path("/plans")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<ListPlansResponse> listPlans(@QueryParam("product_id") String productId,
-                                                   @QueryParam("page_size") Integer pageSize,
-                                                   @QueryParam("page") Integer page,
-                                                   @QueryParam("total_required") Boolean totalRequired) {
-        ListPlansResponse response = subscriptionService.listPlans(null, productId, pageSize, page, totalRequired); // TODO: Add auth
+            @QueryParam("page_size") Integer pageSize,
+            @QueryParam("page") Integer page,
+            @QueryParam("total_required") Boolean totalRequired) {
+        ListPlansResponse response = subscriptionService.listPlans(productId, pageSize, page, totalRequired);
         return ApiResponse.success("Plans retrieved successfully", response);
     }
 
@@ -73,7 +96,7 @@ public class SubscriptionResource {
     @Path("/plans/{planId}")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<PlanResponse> getPlan(@PathParam("planId") String planId) {
-        PlanResponse response = subscriptionService.getPlan(null, planId); // TODO: Add auth
+        PlanResponse response = subscriptionService.getPlan(planId);
         return ApiResponse.success("Plan retrieved successfully", response);
     }
 
@@ -82,7 +105,7 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<PlanResponse> updatePlan(@PathParam("planId") String planId, UpdateSubscriptionRequest request) {
-        PlanResponse response = subscriptionService.updatePlan(null, planId, request); // TODO: Add auth
+        PlanResponse response = subscriptionService.updatePlan(planId, request);
         return ApiResponse.success("Plan updated successfully", response);
     }
 
@@ -90,7 +113,7 @@ public class SubscriptionResource {
     @Path("/plans/{planId}/activate")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> activatePlan(@PathParam("planId") String planId) {
-        subscriptionService.activatePlan(null, planId); // TODO: Add auth
+        subscriptionService.activatePlan(planId);
         return ApiResponse.success("Plan activated successfully");
     }
 
@@ -98,7 +121,7 @@ public class SubscriptionResource {
     @Path("/plans/{planId}/deactivate")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> deactivatePlan(@PathParam("planId") String planId) {
-        subscriptionService.deactivatePlan(null, planId); // TODO: Add auth
+        subscriptionService.deactivatePlan(planId);
         return ApiResponse.success("Plan deactivated successfully");
     }
 
@@ -107,7 +130,7 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> updatePricing(@PathParam("planId") String planId, UpdatePricingRequest request) {
-        subscriptionService.updatePricing(null, planId, request); // TODO: Add auth
+        subscriptionService.updatePricing(planId, request);
         return ApiResponse.success("Pricing updated successfully");
     }
 
@@ -116,17 +139,17 @@ public class SubscriptionResource {
     @Path("/subscriptions")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<ListSubscriptionsResponse> listSubscriptions(@QueryParam("plan_ids") String planIds,
-                                                                  @QueryParam("statuses") String statuses,
-                                                                  @QueryParam("created_after") String createdAfter,
-                                                                  @QueryParam("created_before") String createdBefore,
-                                                                  @QueryParam("status_updated_before") String statusUpdatedBefore,
-                                                                  @QueryParam("status_updated_after") String statusUpdatedAfter,
-                                                                  @QueryParam("filter") String filter,
-                                                                  @QueryParam("page_size") Integer pageSize,
-                                                                  @QueryParam("page") Integer page,
-                                                                  @QueryParam("customer_ids") String customerIds) {
-        ListSubscriptionsResponse response = subscriptionService.listSubscriptions(null, planIds, statuses, createdAfter,
-                createdBefore, statusUpdatedBefore, statusUpdatedAfter, filter, pageSize, page, customerIds); // TODO: Add auth
+            @QueryParam("statuses") String statuses,
+            @QueryParam("created_after") String createdAfter,
+            @QueryParam("created_before") String createdBefore,
+            @QueryParam("status_updated_before") String statusUpdatedBefore,
+            @QueryParam("status_updated_after") String statusUpdatedAfter,
+            @QueryParam("filter") String filter,
+            @QueryParam("page_size") Integer pageSize,
+            @QueryParam("page") Integer page,
+            @QueryParam("customer_ids") String customerIds) {
+        ListSubscriptionsResponse response = subscriptionService.listSubscriptions(planIds, statuses, createdAfter,
+                createdBefore, statusUpdatedBefore, statusUpdatedAfter, filter, pageSize, page, customerIds);
         return ApiResponse.success("Subscriptions retrieved successfully", response);
     }
 
@@ -134,8 +157,8 @@ public class SubscriptionResource {
     @Path("/subscriptions/{subscriptionId}")
     @Produces(MediaType.APPLICATION_JSON)
     public ApiResponse<SubscriptionResponse> getSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                                            @QueryParam("fields") String fields) {
-        SubscriptionResponse response = subscriptionService.getSubscription(null, subscriptionId, fields); // TODO: Add auth
+            @QueryParam("fields") String fields) {
+        SubscriptionResponse response = subscriptionService.getSubscription(subscriptionId, fields);
         return ApiResponse.success("Subscription retrieved successfully", response);
     }
 
@@ -144,8 +167,8 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> updateSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                               UpdateSubscriptionRequest request) {
-        subscriptionService.updateSubscription(null, subscriptionId, request); // TODO: Add auth
+            UpdateSubscriptionRequest request) {
+        subscriptionService.updateSubscription(subscriptionId, request);
         return ApiResponse.success("Subscription updated successfully");
     }
 
@@ -154,8 +177,8 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<PayPalResponse> reviseSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                                         ReviseSubscriptionRequest request) {
-        PayPalResponse response = subscriptionService.reviseSubscription(null, subscriptionId, request); // TODO: Add auth
+            ReviseSubscriptionRequest request) {
+        PayPalResponse response = subscriptionService.reviseSubscription(subscriptionId, request);
         return ApiResponse.success("Subscription revised successfully", response);
     }
 
@@ -164,8 +187,8 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> suspendSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                                SubscriptionActionRequest request) {
-        subscriptionService.suspendSubscription(null, subscriptionId, request); // TODO: Add auth
+            SubscriptionActionRequest request) {
+        subscriptionService.suspendSubscription(subscriptionId, request);
         return ApiResponse.success("Subscription suspended successfully");
     }
 
@@ -174,8 +197,8 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> cancelSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                               SubscriptionActionRequest request) {
-        subscriptionService.cancelSubscription(null, subscriptionId, request); // TODO: Add auth
+            SubscriptionActionRequest request) {
+        subscriptionService.cancelSubscription(subscriptionId, request);
         return ApiResponse.success("Subscription cancelled successfully");
     }
 
@@ -184,8 +207,8 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<Void> activateSubscription(@PathParam("subscriptionId") String subscriptionId,
-                                                 SubscriptionActionRequest request) {
-        subscriptionService.activateSubscription(null, subscriptionId, request); // TODO: Add auth
+            SubscriptionActionRequest request) {
+        subscriptionService.activateSubscription(subscriptionId, request);
         return ApiResponse.success("Subscription activated successfully");
     }
 
@@ -194,18 +217,20 @@ public class SubscriptionResource {
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
     public ApiResponse<PayPalResponse> capturePayment(@PathParam("subscriptionId") String subscriptionId,
-                                                     CaptureSubscriptionRequest request) {
-        PayPalResponse response = subscriptionService.capturePayment(null, subscriptionId, request); // TODO: Add auth
+            CaptureSubscriptionRequest request) {
+        PayPalResponse response = subscriptionService.capturePayment(subscriptionId, request);
         return ApiResponse.success("Payment captured successfully", response);
     }
 
     @GET
     @Path("/subscriptions/{subscriptionId}/transactions")
     @Produces(MediaType.APPLICATION_JSON)
-    public ApiResponse<SubscriptionTransactionsResponse> getTransactions(@PathParam("subscriptionId") String subscriptionId,
-                                                                        @QueryParam("start_time") String startTime,
-                                                                        @QueryParam("end_time") String endTime) {
-        SubscriptionTransactionsResponse response = subscriptionService.getTransactions(null, subscriptionId, startTime, endTime); // TODO: Add auth
+    public ApiResponse<SubscriptionTransactionsResponse> getTransactions(
+            @PathParam("subscriptionId") String subscriptionId,
+            @QueryParam("start_time") String startTime,
+            @QueryParam("end_time") String endTime) {
+        SubscriptionTransactionsResponse response = subscriptionService.getTransactions(subscriptionId, startTime,
+                endTime);
         return ApiResponse.success("Transactions retrieved successfully", response);
     }
 }
