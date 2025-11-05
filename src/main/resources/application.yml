@@ -1,4 +1,5 @@
 quarkus:
+  profile: local
   http:
     port: 8082
 app:
