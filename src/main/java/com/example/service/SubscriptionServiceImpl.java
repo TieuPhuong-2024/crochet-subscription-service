@@ -1,5 +1,6 @@
 package com.example.service;
 
+import java.time.Instant;
 import java.util.Map;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -40,18 +41,23 @@ import jakarta.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Instant;
-
 @Slf4j
 @ApplicationScoped
 public class SubscriptionServiceImpl implements SubscriptionService {
 
-    private static final Map<String, SubscriptionStatus> EVENT_TO_STATUS = Map.of(
-            "BILLING.SUBSCRIPTION.ACTIVATED", SubscriptionStatus.ACTIVE,
-            "BILLING.SUBSCRIPTION.RE-ACTIVATED", SubscriptionStatus.ACTIVE,
-            "BILLING.SUBSCRIPTION.SUSPENDED", SubscriptionStatus.SUSPENDED,
-            "BILLING.SUBSCRIPTION.CANCELLED", SubscriptionStatus.CANCELLED,
-            "BILLING.SUBSCRIPTION.EXPIRED", SubscriptionStatus.EXPIRED);
+    private static final Map<String, SubscriptionStatus> EVENT_TO_STATUS =
+        Map.of(
+            "BILLING.SUBSCRIPTION.ACTIVATED",
+            SubscriptionStatus.ACTIVE,
+            "BILLING.SUBSCRIPTION.RE-ACTIVATED",
+            SubscriptionStatus.ACTIVE,
+            "BILLING.SUBSCRIPTION.SUSPENDED",
+            SubscriptionStatus.SUSPENDED,
+            "BILLING.SUBSCRIPTION.CANCELLED",
+            SubscriptionStatus.CANCELLED,
+            "BILLING.SUBSCRIPTION.EXPIRED",
+            SubscriptionStatus.EXPIRED
+        );
 
     @Inject
     PayPalAuthClientService authClientService;
@@ -83,15 +89,22 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
     private Uni<Void> updateUserRole(String userId, String role) {
         UserUpdateRequest request = UserUpdateRequest.builder()
-                .id(userId)
-                .role(role)
-                .build();
-        return userClientService.update(cfg.apiKey(), request)
-                .onItem().invoke(() -> log.info("User role updated to {}: {}", role, userId));
+            .id(userId)
+            .role(role)
+            .build();
+        return userClientService
+            .update(cfg.apiKey(), request)
+            .onItem()
+            .invoke(() ->
+                log.info("User role updated to {}: {}", role, userId)
+            );
     }
 
     @Transactional
-    public PayPalResponse create(String authHeader, CreateSubscriptionRequest request) {
+    public PayPalResponse create(
+        String authHeader,
+        CreateSubscriptionRequest request
+    ) {
         log.info("Create subscription with token: {}", authHeader);
 
         var crochetJwtToken = jwtUtil.subString(authHeader);
@@ -101,22 +114,35 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         String userId = jwtUtil.extractSubject(crochetJwtToken);
         if (userId == null) {
-            throw new ValidationException("Invalid or missing authentication token");
+            throw new ValidationException(
+                "Invalid or missing authentication token"
+            );
         }
 
-        subRepo.findByUserId(userId)
-                .filter(sub -> sub.getStatus() == SubscriptionStatus.ACTIVE
-                        || sub.getStatus() == SubscriptionStatus.APPROVAL_PENDING)
-                .ifPresent(sub -> {
-                    String message = sub.getStatus() == SubscriptionStatus.ACTIVE
-                            ? "User already has an active subscription"
-                            : "User already has an approval pending subscription";
-                    throw new ValidationException(message);
-                });
+        subRepo
+            .findByUserId(userId)
+            .filter(
+                sub ->
+                    sub.getStatus() == SubscriptionStatus.ACTIVE ||
+                    sub.getStatus() == SubscriptionStatus.APPROVAL_PENDING
+            )
+            .ifPresent(sub -> {
+                String message = sub.getStatus() == SubscriptionStatus.ACTIVE
+                    ? "User already has an active subscription"
+                    : "User already has an approval pending subscription";
+                throw new ValidationException(message);
+            });
 
-        PayPalResponse createSubRes = createSubscription(authClientService.getAccessToken(), request);
+        PayPalResponse createSubRes = paypalSubClient.createSubscription(
+            authClientService.getAccessToken(),
+            null,
+            null,
+            request
+        );
         if (createSubRes == null) {
-            throw new ValidationException("Failed to create subscription with PayPal");
+            throw new ValidationException(
+                "Failed to create subscription with PayPal"
+            );
         }
 
         var sub = subMapper.toEntity(createSubRes);
@@ -133,18 +159,23 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public void handleSubscriptionReturn(String subscriptionId) {
         log.info("Handle subscription return: {}", subscriptionId);
 
-        var sub = subRepo.findBySubscriptionId(subscriptionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription", subscriptionId));
+        var sub = subRepo
+            .findBySubscriptionId(subscriptionId)
+            .orElseThrow(() ->
+                new ResourceNotFoundException("Subscription", subscriptionId)
+            );
         sub.setStatus(SubscriptionStatus.ACTIVE);
         subRepo.persist(sub);
 
         // Update role only in non-prod environments for local testing; prod relies on
         // webhooks
         if (!"prod".equals(profile)) {
-            updateUserRole(sub.getUserId(), "VIP_USER").subscribe().with(
-                    success -> {
-                    },
-                    failure -> log.error("Failed to update user role", failure));
+            updateUserRole(sub.getUserId(), "VIP_USER")
+                .subscribe()
+                .with(
+                    success -> {},
+                    failure -> log.error("Failed to update user role", failure)
+                );
         }
 
         subRepo.flush();
@@ -158,7 +189,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         JsonNode jsonNode = om.readTree(payload);
         String eventType = jsonNode.get("event_type").asText();
         String subscriptionId = jsonNode.get("resource").get("id").asText();
-        log.info("Webhook event received: {}, subscription ID: {}", eventType, subscriptionId);
+        log.info(
+            "Webhook event received: {}, subscription ID: {}",
+            eventType,
+            subscriptionId
+        );
 
         // Check if a subscription exists in a database
         var sub = subRepo.findBySubscriptionId(subscriptionId).orElse(null);
@@ -173,20 +208,29 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             sub.setStatus(newStatus);
             subRepo.persist(sub);
             subRepo.flush();
-            String action = eventType.substring(eventType.lastIndexOf('.') + 1).toLowerCase().replace("-", "");
+            String action = eventType
+                .substring(eventType.lastIndexOf('.') + 1)
+                .toLowerCase()
+                .replace("-", "");
             log.info("Subscription {}: {}", action, subscriptionId);
 
             // Update user role based on status change
             if (newStatus == SubscriptionStatus.ACTIVE) {
-                updateUserRole(sub.getUserId(), "VIP_USER").subscribe().with(
-                        success -> {
-                        },
-                        failure -> log.error("Failed to update user role", failure));
+                updateUserRole(sub.getUserId(), "VIP_USER")
+                    .subscribe()
+                    .with(
+                        success -> {},
+                        failure ->
+                            log.error("Failed to update user role", failure)
+                    );
             } else if (newStatus == SubscriptionStatus.EXPIRED) {
-                updateUserRole(sub.getUserId(), "USER").subscribe().with(
-                        success -> {
-                        },
-                        failure -> log.error("Failed to update user role", failure));
+                updateUserRole(sub.getUserId(), "USER")
+                    .subscribe()
+                    .with(
+                        success -> {},
+                        failure ->
+                            log.error("Failed to update user role", failure)
+                    );
             }
         } else {
             log.info("Unhandled webhook event type: {}", eventType);
@@ -199,36 +243,47 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             throw new ValidationException("User id cannot blank");
         }
 
-        var subscription = subRepo.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found for user", userId));
+        var subscription = subRepo
+            .findByUserId(userId)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Subscription not found for user",
+                    userId
+                )
+            );
 
         // Get PayPal subscription details to get additional information
         SubscriptionResponse payPalDetails = paypalSubClient.getSubscription(
-                authClientService.getAccessToken(),
-                subscription.getId(),
-                null);
+            authClientService.getAccessToken(),
+            subscription.getId(),
+            null
+        );
 
         if (payPalDetails == null) {
-            throw new ValidationException("Failed to fetch subscription details from PayPal");
+            throw new ValidationException(
+                "Failed to fetch subscription details from PayPal"
+            );
         }
 
         return mapToUserSubscription(subscription, payPalDetails);
     }
 
-    private UserSubscription mapToUserSubscription(com.example.entity.Subscription subscription,
-            SubscriptionResponse payPalDetails) {
+    private UserSubscription mapToUserSubscription(
+        com.example.entity.Subscription subscription,
+        SubscriptionResponse payPalDetails
+    ) {
         return UserSubscription.builder()
-                .id(subscription.getId())
-                .userId(subscription.getUserId())
-                .planId(subscription.getPlanId())
-                .paypalSubscriptionId(subscription.getId())
-                .status(mapStatusToFrontend(subscription.getStatus()))
-                .startDate(payPalDetails.getStartTime())
-                .endDate(null) // PayPal doesn't always provide end date; can be calculated based on billing
-                               // cycles if needed
-                .createdAt(payPalDetails.getCreateTime())
-                .updatedAt(payPalDetails.getUpdateTime())
-                .build();
+            .id(subscription.getId())
+            .userId(subscription.getUserId())
+            .planId(subscription.getPlanId())
+            .paypalSubscriptionId(subscription.getId())
+            .status(mapStatusToFrontend(subscription.getStatus()))
+            .startDate(payPalDetails.getStartTime())
+            .endDate(null) // PayPal doesn't always provide end date; can be calculated based on billing
+            // cycles if needed
+            .createdAt(payPalDetails.getCreateTime())
+            .updatedAt(payPalDetails.getUpdateTime())
+            .build();
     }
 
     private String mapStatusToFrontend(SubscriptionStatus status) {
@@ -247,143 +302,268 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
     public PlanResponse createPlan(CreatePlanRequest request) {
         log.info("Creating PayPal plan");
-        return paypalSubClient.createPlan(authClientService.getAccessToken(), null, request);
+        return paypalSubClient.createPlan(
+            authClientService.getAccessToken(),
+            null,
+            request
+        );
     }
 
     @Override
-    public ListPlansResponse listPlans(String productId, Integer pageSize, Integer page,
-            Boolean totalRequired) {
+    public ListPlansResponse listPlans(
+        String productId,
+        Integer pageSize,
+        Integer page,
+        Boolean totalRequired
+    ) {
         log.info("Listing PayPal plans");
-        return paypalSubClient.listPlans(authClientService.getAccessToken(), productId, pageSize, page, totalRequired);
+        return paypalSubClient.listPlans(
+            authClientService.getAccessToken(),
+            productId,
+            pageSize,
+            page,
+            totalRequired
+        );
     }
 
     @Override
     public PlanResponse getPlan(String planId) {
         log.info("Getting PayPal plan: {}", planId);
-        return paypalSubClient.getPlan(authClientService.getAccessToken(), planId);
+        return paypalSubClient.getPlan(
+            authClientService.getAccessToken(),
+            planId
+        );
     }
 
     @Override
-    public PlanResponse updatePlan(String planId, UpdateSubscriptionRequest request) {
+    public PlanResponse updatePlan(
+        String planId,
+        UpdateSubscriptionRequest request
+    ) {
         log.info("Updating PayPal plan: {}", planId);
-        return paypalSubClient.updatePlan(authClientService.getAccessToken(), planId, request);
+        return paypalSubClient.updatePlan(
+            authClientService.getAccessToken(),
+            planId,
+            request
+        );
     }
 
     @Override
     public void activatePlan(String planId) {
         log.info("Activating PayPal plan: {}", planId);
-        paypalSubClient.activatePlan(authClientService.getAccessToken(), planId);
+        paypalSubClient.activatePlan(
+            authClientService.getAccessToken(),
+            planId
+        );
     }
 
     @Override
     public void deactivatePlan(String planId) {
         log.info("Deactivating PayPal plan: {}", planId);
-        paypalSubClient.deactivatePlan(authClientService.getAccessToken(), planId);
+        paypalSubClient.deactivatePlan(
+            authClientService.getAccessToken(),
+            planId
+        );
     }
 
     @Override
     public void updatePricing(String planId, UpdatePricingRequest request) {
         log.info("Updating pricing for PayPal plan: {}", planId);
-        paypalSubClient.updatePricing(authClientService.getAccessToken(), planId, request);
-    }
-
-    // Subscription operations
-    @Override
-    public PayPalResponse createSubscription(String token, CreateSubscriptionRequest request) {
-        log.info("Creating PayPal subscription");
-        return paypalSubClient.createSubscription(authClientService.getAccessToken(), null, null, request);
+        paypalSubClient.updatePricing(
+            authClientService.getAccessToken(),
+            planId,
+            request
+        );
     }
 
     @Override
-    public ListSubscriptionsResponse listSubscriptions(String planIds, String statuses,
-            String createdAfter,
-            String createdBefore, String statusUpdatedBefore, String statusUpdatedAfter,
-            String filter, Integer pageSize, Integer page, String customerIds) {
+    public ListSubscriptionsResponse listSubscriptions(
+        String planIds,
+        String statuses,
+        String createdAfter,
+        String createdBefore,
+        String statusUpdatedBefore,
+        String statusUpdatedAfter,
+        String filter,
+        Integer pageSize,
+        Integer page,
+        String customerIds
+    ) {
         log.info("Listing PayPal subscriptions");
-        return paypalSubClient.listSubscriptions(authClientService.getAccessToken(), planIds, statuses, createdAfter,
-                createdBefore,
-                statusUpdatedBefore, statusUpdatedAfter, filter, pageSize, page, customerIds);
+        return paypalSubClient.listSubscriptions(
+            authClientService.getAccessToken(),
+            planIds,
+            statuses,
+            createdAfter,
+            createdBefore,
+            statusUpdatedBefore,
+            statusUpdatedAfter,
+            filter,
+            pageSize,
+            page,
+            customerIds
+        );
     }
 
     @Override
-    public SubscriptionResponse getSubscription(String subscriptionId, String fields) {
+    public SubscriptionResponse getSubscription(
+        String subscriptionId,
+        String fields
+    ) {
         log.info("Getting PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.getSubscription(authClientService.getAccessToken(), subscriptionId, fields);
+        return paypalSubClient.getSubscription(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            fields
+        );
     }
 
     @Override
-    public void updateSubscription(String subscriptionId, UpdateSubscriptionRequest request) {
+    public void updateSubscription(
+        String subscriptionId,
+        UpdateSubscriptionRequest request
+    ) {
         log.info("Updating PayPal subscription: {}", subscriptionId);
-        paypalSubClient.updateSubscription(authClientService.getAccessToken(), subscriptionId, request);
+        paypalSubClient.updateSubscription(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            request
+        );
     }
 
     @Override
-    public PayPalResponse reviseSubscription(String subscriptionId, ReviseSubscriptionRequest request) {
+    public PayPalResponse reviseSubscription(
+        String subscriptionId,
+        ReviseSubscriptionRequest request
+    ) {
         log.info("Revising PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.reviseSubscription(authClientService.getAccessToken(), subscriptionId, request);
+        return paypalSubClient.reviseSubscription(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            request
+        );
     }
 
     @Override
-    public void suspendSubscription(String subscriptionId, SubscriptionActionRequest request) {
+    public void suspendSubscription(
+        String subscriptionId,
+        SubscriptionActionRequest request
+    ) {
         log.info("Suspending PayPal subscription: {}", subscriptionId);
-        paypalSubClient.suspendSubscription(authClientService.getAccessToken(), subscriptionId, request);
-    }
-
-    @Override
-    public void cancelSubscription(String subscriptionId, SubscriptionActionRequest request) {
-        log.info("Cancelling PayPal subscription: {}", subscriptionId);
-        paypalSubClient.cancelSubscription(authClientService.getAccessToken(), subscriptionId, request);
+        paypalSubClient.suspendSubscription(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            request
+        );
     }
 
     @Transactional
     @Override
-    public void cancelUserSubscription(String userId, SubscriptionActionRequest request) {
-        log.info("Cancelling subscription for user: {}", userId);
+    public void cancelSubscription(
+        String subscriptionId,
+        SubscriptionActionRequest request
+    ) {
+        log.info("Cancelling PayPal subscription: {}", subscriptionId);
 
-        var subscription = subRepo.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found for user", userId));
+        var subscription = subRepo
+            .findBySubscriptionId(subscriptionId)
+            .orElseThrow(() ->
+                new ResourceNotFoundException(
+                    "Subscription not found",
+                    subscriptionId
+                )
+            );
 
-        // Call PayPal to cancel the subscription
-        paypalSubClient.cancelSubscription(authClientService.getAccessToken(), subscription.getId(), request);
-
-        // Get updated subscription details from PayPal to retrieve next_billing_time
+        // Check subscription status
         SubscriptionResponse payPalDetails = paypalSubClient.getSubscription(
                 authClientService.getAccessToken(),
                 subscription.getId(),
-                null);
+                null
+        );
 
-        if (payPalDetails != null && payPalDetails.getBillingInfo() != null) {
-            String nextBillingTime = payPalDetails.getBillingInfo().getNextBillingTime();
+        if (payPalDetails == null) {
+            throw new ValidationException(
+                    "Failed to fetch subscription details from PayPal"
+            );
+        }
+
+        String currentStatus = payPalDetails.getStatus();
+        if (!currentStatus.equals("ACTIVE") && !currentStatus.equals("SUSPENDED")) {
+            throw new ValidationException("Subscription cannot be cancelled. Current status: " + currentStatus);
+        }
+
+        if (payPalDetails.getBillingInfo() != null) {
+            String nextBillingTime = payPalDetails
+                .getBillingInfo()
+                .getNextBillingTime();
             if (nextBillingTime != null) {
                 subscription.setAccessExpiresAt(Instant.parse(nextBillingTime));
-                log.info("Set access expiration time to: {} for user: {}", nextBillingTime, userId);
+                log.info(
+                    "Subscription access expires at: {}",
+                    subscription.getAccessExpiresAt()
+                );
             }
         }
+
+        // Call PayPal to cancel the subscription
+        paypalSubClient.cancelSubscription(
+                authClientService.getAccessToken(),
+                subscription.getId(),
+                request
+        );
 
         subscription.setStatus(SubscriptionStatus.CANCELLED);
         subRepo.persist(subscription);
         subRepo.flush();
 
-        log.info("Subscription cancelled successfully for user: {}", userId);
+        log.info("Subscription cancelled: {}", subscription.getId());
     }
 
     @Override
-    public void activateSubscription(String subscriptionId, SubscriptionActionRequest request) {
+    public void activateSubscription(
+        String subscriptionId,
+        SubscriptionActionRequest request
+    ) {
         log.info("Activating PayPal subscription: {}", subscriptionId);
-        paypalSubClient.activateSubscription(authClientService.getAccessToken(), subscriptionId, request);
+        paypalSubClient.activateSubscription(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            request
+        );
     }
 
     @Override
-    public PayPalResponse capturePayment(String subscriptionId, CaptureSubscriptionRequest request) {
-        log.info("Capturing payment for PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.capturePayment(authClientService.getAccessToken(), null, subscriptionId, request);
+    public PayPalResponse capturePayment(
+        String subscriptionId,
+        CaptureSubscriptionRequest request
+    ) {
+        log.info(
+            "Capturing payment for PayPal subscription: {}",
+            subscriptionId
+        );
+        return paypalSubClient.capturePayment(
+            authClientService.getAccessToken(),
+            null,
+            subscriptionId,
+            request
+        );
     }
 
     @Override
-    public SubscriptionTransactionsResponse getTransactions(String subscriptionId, String startTime,
-            String endTime) {
-        log.info("Getting transactions for PayPal subscription: {}", subscriptionId);
-        return paypalSubClient.getTransactions(authClientService.getAccessToken(), subscriptionId, startTime, endTime);
+    public SubscriptionTransactionsResponse getTransactions(
+        String subscriptionId,
+        String startTime,
+        String endTime
+    ) {
+        log.info(
+            "Getting transactions for PayPal subscription: {}",
+            subscriptionId
+        );
+        return paypalSubClient.getTransactions(
+            authClientService.getAccessToken(),
+            subscriptionId,
+            startTime,
+            endTime
+        );
     }
-
 }

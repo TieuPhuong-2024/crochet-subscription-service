@@ -1,9 +1,9 @@
 package com.example.resource;
 
 import com.example.dto.ApiResponse;
-import com.example.dto.SubscriptionActionRequest;
 import com.example.dto.UserSubscription;
 import com.example.service.SubscriptionService;
+
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
@@ -42,24 +42,6 @@ public class SubscriptionResource {
     ) {
         subscriptionService.handleSubscriptionReturn(subscriptionId);
         return ApiResponse.success("Subscription activated successfully");
-    }
-
-    @POST
-    @Path("/user/{userId}/cancel")
-    public ApiResponse<Void> cancelUserSubscription(
-        @PathParam("userId") String userId,
-        SubscriptionActionRequest request
-    ) {
-        subscriptionService.cancelUserSubscription(userId, request);
-        return ApiResponse.success("Subscription cancelled successfully. Access will expire at the end of the billing period.");
-    }
-
-    @POST
-    @Path("/{subscriptionId}/cancel-callback")
-    public ApiResponse<Void> handleSubscriptionCancel(
-        @PathParam("subscriptionId") String subscriptionId
-    ) {
-        return ApiResponse.success("Subscription cancellation acknowledged");
     }
 
     @POST
