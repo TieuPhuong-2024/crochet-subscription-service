@@ -6,13 +6,12 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.Instant;
 
 @Entity
 @Table(name = "subscriptions")
@@ -39,6 +38,6 @@ public class Subscription {
     @Column(name = "create_time")
     private Instant createTime;
 
-    @Column(name = "approve_link")
-    private String approveLink;
+    @Column(name = "access_expires_at")
+    private Instant accessExpiresAt;
 }

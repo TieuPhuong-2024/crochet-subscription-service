@@ -40,6 +40,8 @@ import jakarta.transaction.Transactional;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
+
 @Slf4j
 @ApplicationScoped
 public class SubscriptionServiceImpl implements SubscriptionService {
@@ -331,6 +333,38 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public void cancelSubscription(String subscriptionId, SubscriptionActionRequest request) {
         log.info("Cancelling PayPal subscription: {}", subscriptionId);
         paypalSubClient.cancelSubscription(authClientService.getAccessToken(), subscriptionId, request);
+    }
+
+    @Transactional
+    @Override
+    public void cancelUserSubscription(String userId, SubscriptionActionRequest request) {
+        log.info("Cancelling subscription for user: {}", userId);
+
+        var subscription = subRepo.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found for user", userId));
+
+        // Call PayPal to cancel the subscription
+        paypalSubClient.cancelSubscription(authClientService.getAccessToken(), subscription.getId(), request);
+
+        // Get updated subscription details from PayPal to retrieve next_billing_time
+        SubscriptionResponse payPalDetails = paypalSubClient.getSubscription(
+                authClientService.getAccessToken(),
+                subscription.getId(),
+                null);
+
+        if (payPalDetails != null && payPalDetails.getBillingInfo() != null) {
+            String nextBillingTime = payPalDetails.getBillingInfo().getNextBillingTime();
+            if (nextBillingTime != null) {
+                subscription.setAccessExpiresAt(Instant.parse(nextBillingTime));
+                log.info("Set access expiration time to: {} for user: {}", nextBillingTime, userId);
+            }
+        }
+
+        subscription.setStatus(SubscriptionStatus.CANCELLED);
+        subRepo.persist(subscription);
+        subRepo.flush();
+
+        log.info("Subscription cancelled successfully for user: {}", userId);
     }
 
     @Override

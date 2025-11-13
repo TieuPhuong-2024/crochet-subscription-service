@@ -4,6 +4,8 @@ import com.example.entity.Subscription;
 import io.quarkus.hibernate.orm.panache.PanacheRepository;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 @ApplicationScoped
@@ -15,5 +17,9 @@ public class SubscriptionRepository implements PanacheRepository<Subscription> {
 
     public Optional<Subscription> findByUserId(String userId) {
         return find("userId", userId).firstResultOptional();
+    }
+
+    public List<Subscription> findExpiredSubscriptions(Instant now) {
+        return find("accessExpiresAt <= ?1 and status = 'CANCELLED'", now).list();
     }
 }

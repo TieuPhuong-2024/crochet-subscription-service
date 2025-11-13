@@ -35,6 +35,8 @@ public interface SubscriptionService {
 
     void cancelSubscription(String subscriptionId, SubscriptionActionRequest request);
 
+    void cancelUserSubscription(String userId, SubscriptionActionRequest request);
+
     void activateSubscription(String subscriptionId, SubscriptionActionRequest request);
 
     PayPalResponse capturePayment(String subscriptionId, CaptureSubscriptionRequest request);

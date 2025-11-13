@@ -27,8 +27,7 @@ public class SubscriptionMapper {
         builder
                 .id(response.getId())
                 .status(mapStatus(response.getStatus()))
-                .createTime(response.getCreateTime())
-                .approveLink(approveLink);
+                .createTime(response.getCreateTime());
 
         return builder.build();
     }
